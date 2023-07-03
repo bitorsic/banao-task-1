@@ -106,7 +106,7 @@ app.put('/forgot-password', async (req, res) => {
     try {
         const user = await collection.findOne({ _id: req.query.username });
         if (user == null) throw 403;
-        if (req.query.otp != user.otp) throw 401;
+        if (req.query.otp != user.otp || user.otp == "000000") throw 401;
 
         await collection.updateOne({ _id: req.query.username },
             { $set: { 
