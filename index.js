@@ -3,6 +3,8 @@ const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcrypt');
 const cookieParser = require('cookie-parser');
+const jwt = require("jsonwebtoken");
+const auth = require("./auth");
 var nodemailer = require('nodemailer');
 const app = express();
 app.use(cors());
@@ -44,11 +46,11 @@ app.post('/register', async (req, res) => {
 
         await users.insertOne(user);
 
-        res.status(201).send({ msg: "Registration Successful" })
+        res.status(201).send("Registration Successful")
     } catch (e) {
         let code = 500, message = e;
         if (e.code == 11000) { code = 409; message = "Username already in use" }
-        res.status(code).send({ msg: message });
+        res.status(code).send(message);
     }
 })
 
@@ -60,14 +62,14 @@ app.post('/login', async (req, res) => {
         if (user == null) throw 400;
 
         if (await bcrypt.compare(req.body.password, user.password)) {
-            res.cookie(`username`, user._id)
-            res.send({ msg: "Logged in as " + user._id });
+            const token = jwt.sign({ username: user._id }, process.env.TOKEN_KEY, { expiresIn: "15m" });
+            res.status(200).send({ username: user._id, token });
         } else { throw 403 }
     } catch (e) {
         let code = 500, message = e;
         if (e == 400) { code = e, message = "User not found" }
         if (e == 403) { code = e, message = "Incorrect password" }
-        res.status(code).send({ msg: message });
+        res.status(code).send(message);
     }
 })
 
@@ -98,12 +100,12 @@ app.get('/forgot-password', async (req, res) => {
 
         transport.sendMail(mailOptions);
 
-        res.send({ msg: "The OTP has been sent to your email" });
+        res.status(200).send("The OTP has been sent to your email");
     } catch (e) {
         console.log(e);
         let code = 500, message = e;
         if (e == 403) { code = e, message = "The username does not exist" }
-        res.status(code).send({ msg: message });
+        res.status(code).send(message);
     }
 })
 
@@ -122,20 +124,18 @@ app.put('/forgot-password', async (req, res) => {
             }
         )
 
-        res.send({ msg: "The password has been reset for the user " + user._id })
+        res.status(200).send("The password has been reset for the user " + user._id)
     } catch (e) {
         let code = 500, message = e;
         if (e == 403) { code = e, message = "The username does not exist" }
         if (e == 401) { code = e, message = "The OTP is incorrect" }
-        res.status(code).send({ msg: message });
+        res.status(code).send(message);
     }
 })
 
 // Post Endpoint //
-app.post('/post', async (req, res) => {
+app.post('/post', auth, async (req, res) => {
     try {
-        if (req.cookies.username == undefined) throw 401;
-
         let postId;
         let post = await posts.findOne();
         if (post == null) await posts.insertOne({ _id: 0, postId: 1 });
@@ -143,7 +143,7 @@ app.post('/post', async (req, res) => {
 
         post = {
             _id: postId,
-            by: req.cookies.username,
+            by: req.user.username,
             content: req.body.content,
             edited: false,
             likes: [],
@@ -165,8 +165,7 @@ app.post('/post', async (req, res) => {
         res.status(201).send("Post created with id = " + post._id);
     } catch (e) {
         let code = 500, message = e;
-        if (e == 401) { code = e, message = "Not logged in" }
-        res.status(code).send({ msg: message });
+        res.status(code).send(message);
     }
 });
 
@@ -190,41 +189,41 @@ app.get('/post', async (req, res) => {
             }
         }
 
-        res.send(data);
+        res.status(200).send(data);
     } catch (e) {
         let code = 500, message = e;
         if (e == 404) { code = e, message = "No posts found" }
-        res.status(code).send({ msg: message });
+        res.status(code).send(message);
     }
 });
 
-app.put('/post', async (req, res) => {
+app.put('/post', auth, async (req, res) => {
     try {
         const post = await posts.findOne({ _id: Number(req.query.postId) });
         
         if (post == null) throw 404;
-        if (post.by != req.cookies.username) throw 401;
+        if (post.by != req.user.username) throw 401;
 
         await posts.updateOne(
             { _id: post._id },
             { $set: { content: req.body.content, edited: true } }
         );
 
-        res.send({msg: "Post with id = " + post._id + " edited"});
+        res.status(200).send("Post with id = " + post._id + " edited");
     } catch (e) {
         let code = 500, message = e;
         if (e == 404) { code = e, message = "Post with given id not found" }
         if (e == 401) { code = e, message = "Post does not belong to the user" }
-        res.status(code).send({ msg: message });
+        res.status(code).send(message);
     }
 });
 
-app.delete('/post', async (req, res) => {
+app.delete('/post', auth, async (req, res) => {
     try {
         const post = await posts.findOne({ _id: Number(req.query.postId) });
         
         if (post == null) throw 404;
-        if (post.by != req.cookies.username) throw 401;
+        if (post.by != req.user.username) throw 401;
 
         await posts.deleteOne({ _id: post._id });
         await users.updateOne({ _id: post.by }, {$pull: { posts: post._id }});
@@ -239,64 +238,44 @@ app.delete('/post', async (req, res) => {
             await users.updateOne({ _id: comment.by }, { $pull: { comments: comment._id } });
         }
 
-        res.send({msg: "Post with id = " + post._id + " deleted"});
+        res.status(200).send("Post with id = " + post._id + " deleted");
     } catch (e) {
         let code = 500, message = e;
         if (e == 404) { code = e, message = "Post with given id not found" }
         if (e == 401) { code = e, message = "Post does not belong to the user" }
-        res.status(code).send({ msg: message });
+        res.status(code).send(message);
     }
 });
 
 // Like Endpoint //
-app.put('/like', async (req, res) => {
+app.put('/like', auth, async (req, res) => {
     try {
-        if (req.cookies.username == undefined) throw 401;
-        
+        let uname = req.user.username;
         let action;
         const post = await posts.findOne({ _id: Number(req.query.postId) });       
         if (post == null) throw 404;
 
-        if (post.likes.includes(req.cookies.username)) {
-            await posts.updateOne(
-                { _id: post._id },
-                { $pull: { likes: req.cookies.username } }
-            );
-
-            await users.updateOne(
-                { _id: req.cookies.username },
-                { $pull: { likes: post._id } }
-            );
-
+        if (post.likes.includes(uname)) {
+            await posts.updateOne( { _id: post._id }, { $pull: { likes: uname } });
+            await users.updateOne( { _id: uname }, { $pull: { likes: post._id } });
             action = " unliked by ";
         } else {
-            await posts.updateOne(
-                { _id: post._id },
-                { $push: { likes: req.cookies.username } }
-            );
-
-            await users.updateOne(
-                { _id: req.cookies.username },
-                { $push: { likes: post._id } }
-            );
-
+            await posts.updateOne({ _id: post._id }, { $push: { likes: uname } });
+            await users.updateOne({ _id: uname }, { $push: { likes: post._id } });
             action = " liked by ";
         }
 
-        res.send({msg: "Post with id = " + post._id + action + req.cookies.username});
+        res.status(200).send("Post with id = " + post._id + action + uname);
     } catch (e) {
         let code = 500, message = e;
-        if (e == 401) { code = e, message = "Not logged in" }
         if (e == 404) { code = e, message = "Post with given id not found" }
-        res.status(code).send({ msg: message });
+        res.status(code).send(message);
     }
 });
 
 // Comment Endpoint //
-app.post('/comment', async (req, res) => {
+app.post('/comment', auth, async (req, res) => {
     try {
-        if (req.cookies.username == undefined) throw 401;
-
         const post = await posts.findOne({ _id: Number(req.body.postId) });
         if (post == null) throw 404;
 
@@ -307,7 +286,7 @@ app.post('/comment', async (req, res) => {
 
         comment = {
             _id: commentId,
-            by: req.cookies.username,
+            by: req.user.username,
             on: post._id,
             content: req.body.content
         };
@@ -318,34 +297,33 @@ app.post('/comment', async (req, res) => {
         await posts.updateOne({ _id: post._id }, { $push: { comments: comment._id } });
         await users.updateOne({ _id: comment.by }, { $push: { comments: comment._id } });
         
-        res.status(201).send("Commented on post with id = " + post._id);
+        res.status(201).send("Commented on post with id = " + post._id + ", comment id = " + comment._id);
     } catch (e) {
         let code = 500, message = e;
-        if (e == 401) { code = e, message = "Not logged in" }
         if (e == 404) { code = e, message = "Post with given id not found" }
-        res.status(code).send({ msg: message });
+        res.status(code).send(message);
     }
 });
 
-app.delete('/comment', async (req, res) => {
+app.delete('/comment', auth, async (req, res) => {
     try {
         const comment = await comments.findOne({ _id: Number(req.query.commentId) });
         if (comment == null) throw 404;
         
         const post = await posts.findOne({ _id: comment.on });
 
-        if (req.cookies.username != post.by && req.cookies.username != comment.by) throw 401;
+        if (req.user.username != post.by && req.user.username != comment.by) throw 401;
 
         await comments.deleteOne({ _id: comment._id });
         await posts.updateOne( { _id: post._id }, {$pull: {comments: comment._id}});
         await users.updateOne( { _id: comment.by }, {$pull: {comments: comment._id}});
 
-        res.send({msg: "Post with id = " + post._id + " deleted"});
+        res.status(200).send("Comment with id = " + comment._id + " deleted");
     } catch (e) {
         let code = 500, message = e;
         if (e == 404) { code = e, message = "Comment with given id not found" }
         if (e == 401) { code = e, message = "The user is not permitted to delete the comment" }
-        res.status(code).send({ msg: message });
+        res.status(code).send(message);
     }
 });
 
