@@ -85,8 +85,8 @@ app.get('/forgot-password', async (req, res) => {
             host: "sandbox.smtp.mailtrap.io",
             port: 2525,
             auth: {
-                user: "1935aa5bec508b",
-                pass: "81307a95f0579b"
+                user: process.env.MAILTRAP_USER,
+                pass: process.env.MAILTRAP_PASS
             }
         });
 
