@@ -17,7 +17,7 @@ router.post('/', auth, async (req, res) => {
         if (comment == null) {
             await comments.insertOne({ _id: 0, commentId: 1 });
             commentId = 1;
-        } else commentId = post.commentId;
+        } else commentId = comment.commentId;
 
         comment = {
             _id: commentId,
