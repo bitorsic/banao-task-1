@@ -8,13 +8,13 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(cookieParser());
+require('dotenv').config();
 
 let users, posts, comments;
 const ConnectMongo = async () => {
     let mongoClient, db;
-    let uri = "mongodb+srv://bitorsic:ZflNK6PFtJlKMMBK@cluster0.kb3evhs.mongodb.net/?retryWrites=true&w=majority";
     try {
-        mongoClient = new MongoClient(uri);
+        mongoClient = new MongoClient(process.env.DB_URL);
         console.log('Connecting to MongoDB Atlas cluster...');
         await mongoClient.connect();
         db = mongoClient.db('banao');
