@@ -32,7 +32,7 @@ router.put('/', async (req, res) => {
             to: user.email,
             subject: 'Password Reset',
             text: 'Here\'s the link to reset your password:\n' +
-                'http://localhost:3000/forgot-password?token=' + token +
+                'https://banao-task-2.onrender.com/forgot-password?token=' + token +
                 '\n\nThe password will be reset to the one you provided to send the email.' +
                 '\nThe link is valid only for 10 minutes.'
         };
