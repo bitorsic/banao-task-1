@@ -1,67 +1,67 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const nodemailer = require('nodemailer');
+const jwt = require("jsonwebtoken");
 const router = express.Router();
 const mongoUtil = require('../../mongoUtil');
 
-router.get('/', async (req, res) => {
+router.put('/', async (req, res) => {
     try {
         const users = mongoUtil.getDb().collection('users');
-        const user = await users.findOne({ _id: req.query.username });
-        const otp = Math.floor(100000 + Math.random() * 900000);
 
+        const user = await users.findOne({ _id: req.query.username });
         if (user == null) throw 403;
 
+        const token = jwt.sign(
+            { username: user._id, password: req.body.password }, 
+            process.env.TOKEN_KEY, { expiresIn: "10m" }
+        );
+
         let transport = nodemailer.createTransport({
-            host: "sandbox.smtp.mailtrap.io",
-            port: 2525,
+            host: "smtp.zoho.in",
+            port: 465,
+            secure: true,
             auth: {
-                user: process.env.MAILTRAP_USER,
-                pass: process.env.MAILTRAP_PASS
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS
             }
         });
 
         var mailOptions = {
+            from: process.env.EMAIL_USER,
             to: user.email,
-            subject: 'Your OTP',
-            text: 'Your OTP to log in is: ' + otp
+            subject: 'Password Reset',
+            text: 'Here\'s the link to reset your password:\n' +
+                'http://localhost:3000/forgot-password?token=' + token +
+                '\n\nThe password will be reset to the one you provided to send the email.' +
+                '\nThe link is valid only for 10 minutes.'
         };
-
-        await users.updateOne({ _id: req.query.username }, { $set: { otp: otp } });
 
         transport.sendMail(mailOptions);
 
-        res.status(200).send("The OTP has been sent to your email");
+        res.status(200).send("An email with the reset link has been sent to your email");
     } catch (e) {
-        console.log(e);
         let code = 500, message = e;
         if (e == 403) { code = e, message = "The username does not exist" }
         res.status(code).send(message);
     }
 });
 
-router.put('/', async (req, res) => {
+router.get('/', async (req, res) => {
     try {
         const users = mongoUtil.getDb().collection('users');
-        const user = await users.findOne({ _id: req.query.username });
-        if (user == null) throw 403;
-        if (req.query.otp != user.otp || user.otp == "000000") throw 401;
 
-        await users.updateOne({ _id: req.query.username },
-            {
-                $set: {
-                    password: await bcrypt.hash(req.body.password, 10),
-                    otp: "000000"
-                }
-            }
-        )
+        const decoded = jwt.verify(req.query.token, process.env.TOKEN_KEY);
 
-        res.status(200).send("The password has been reset for the user " + user._id)
+        await users.updateOne({ _id: decoded.username },{
+            $set: { password: await bcrypt.hash(decoded.password, 10) }
+        });
+
+        res.status(200).send("Password successfully reset")
     } catch (e) {
-        let code = 500, message = e;
-        if (e == 403) { code = e, message = "The username does not exist" }
-        if (e == 401) { code = e, message = "The OTP is incorrect" }
-        res.status(code).send(message);
+        if (e.name == "TokenExpiredError") { message = "The link has expired" }
+        if (e.name == "JsonWebTokenError") { message = "Please recheck and re-enter the link" }
+        res.status(401).send(message);
     }
 });
 
