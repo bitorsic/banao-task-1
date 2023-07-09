@@ -6,9 +6,10 @@ const router = express.Router();
 const mongoUtil = require('../../mongoUtil');
 
 router.put('/', async (req, res) => {
-    try {
+    try {    
         const users = mongoUtil.getDb().collection('users');
-
+        const url = req.protocol + '://' + req.get('host');
+        
         const user = await users.findOne({ _id: req.query.username });
         if (user == null) throw 403;
 
@@ -31,8 +32,9 @@ router.put('/', async (req, res) => {
             from: process.env.EMAIL_USER,
             to: user.email,
             subject: 'Password Reset',
-            text: 'Here\'s the link to reset your password:\n' +
-                'https://banao-task-2.onrender.com/forgot-password?token=' + token +
+            text: 
+                'Here\'s the link to reset your password:\n' + 
+                url + '/forgot-password?token=' + token +
                 '\n\nThe password will be reset to the one you provided to send the email.' +
                 '\nThe link is valid only for 10 minutes.'
         };
