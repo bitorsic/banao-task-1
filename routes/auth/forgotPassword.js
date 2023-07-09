@@ -39,7 +39,7 @@ router.put('/', async (req, res) => {
 
         transport.sendMail(mailOptions);
 
-        res.status(200).send("An email with the reset link has been sent to your email");
+        res.status(200).send("An email with the reset link has been sent to your email id");
     } catch (e) {
         let code = 500, message = e;
         if (e == 403) { code = e, message = "The username does not exist" }
