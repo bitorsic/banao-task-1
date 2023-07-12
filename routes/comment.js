@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const mongoUtil = require('../mongoUtil');
 const auth = require('../auth');
+const { encrypt } = require('../cryptography');
 
 router.post('/', auth, async (req, res) => {
     try {
@@ -19,11 +20,13 @@ router.post('/', auth, async (req, res) => {
             commentId = 1;
         } else commentId = comment.commentId;
 
+        let { iv, content } = encrypt(req.body.content);
+
         comment = {
             _id: commentId,
             by: req.user.username,
             on: post._id,
-            content: req.body.content
+            iv, content
         };
 
         await comments.insertOne(comment);

@@ -12,7 +12,7 @@ router.post('/', async (req, res) => {
         if (user == null) throw 400;
 
         if (await bcrypt.compare(req.body.password, user.password)) {
-            const token = jwt.sign({ username: user._id }, process.env.TOKEN_KEY, { expiresIn: "15m" });
+            const token = jwt.sign({ username: user._id }, process.env.LOGIN_KEY, { expiresIn: "15m" });
             res.status(200).send({ username: user._id, token });
         } else { throw 403 }
     } catch (e) {

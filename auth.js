@@ -7,7 +7,7 @@ const verifyToken = (req, res, next) => {
     
     try {
         token = token.split(' ')[1];
-        const decoded = jwt.verify(token, process.env.TOKEN_KEY);
+        const decoded = jwt.verify(token, process.env.LOGIN_KEY);
         req.user = decoded;
     } catch (err) {
         return res.status(401).send("Invalid Token");

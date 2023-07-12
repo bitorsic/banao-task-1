@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const mongoUtil = require('../mongoUtil');
 const auth = require('../auth');
+const { encrypt, decrypt } = require('../cryptography');
 
 router.post('/', auth, async (req, res) => {
     try {
@@ -15,10 +16,12 @@ router.post('/', auth, async (req, res) => {
             postId = 1;
         } else postId = post.postId;
 
+        let { iv, content } = encrypt(req.body.content);
+
         post = {
             _id: postId,
             by: req.user.username,
-            content: req.body.content,
+            iv, content,
             edited: false,
             likes: [],
             comments: []
@@ -44,7 +47,7 @@ router.post('/', auth, async (req, res) => {
     }
 });
 
-router.get('/', async (req, res) => {
+router.get('/', auth, async (req, res) => {
     try {
         const posts = mongoUtil.getDb().collection('posts');
         const comments = mongoUtil.getDb().collection('comments');
@@ -59,8 +62,13 @@ router.get('/', async (req, res) => {
         if (data.length == 0) throw 404;
 
         for (let i=0;i<data.length;i++) {
+            data[i].content = decrypt(data[i].iv, data[i].content);
+            delete data[i].iv;
+
             for (let j=0;j<data[i].comments.length;j++) {
                 const comment = await comments.findOne({ _id: data[i].comments[0] });
+
+                comment.content = decrypt(comment.iv, comment.content);
                 data[i].comments.push([comment.by, comment.content]);
                 data[i].comments.shift();
             }
@@ -82,9 +90,11 @@ router.put('/', auth, async (req, res) => {
         if (post == null) throw 404;
         if (post.by != req.user.username) throw 401;
 
+        let { iv, content } = encrypt(req.body.content);
+
         await posts.updateOne(
             { _id: post._id },
-            { $set: { content: req.body.content, edited: true } }
+            { $set: { iv, content, edited: true } }
         );
 
         res.status(200).send("Post with id = " + post._id + " edited");

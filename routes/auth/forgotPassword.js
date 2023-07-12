@@ -15,7 +15,7 @@ router.put('/', async (req, res) => {
 
         const token = jwt.sign(
             { username: user._id, password: req.body.password }, 
-            process.env.TOKEN_KEY, { expiresIn: "10m" }
+            process.env.RESET_KEY, { expiresIn: "10m" }
         );
 
         let transport = nodemailer.createTransport({
@@ -53,7 +53,7 @@ router.get('/', async (req, res) => {
     try {
         const users = mongoUtil.getDb().collection('users');
 
-        const decoded = jwt.verify(req.query.token, process.env.TOKEN_KEY);
+        const decoded = jwt.verify(req.query.token, process.env.RESET_KEY);
 
         await users.updateOne({ _id: decoded.username },{
             $set: { password: await bcrypt.hash(decoded.password, 10) }
