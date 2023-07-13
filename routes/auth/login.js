@@ -7,7 +7,7 @@ const mongoUtil = require('../../mongoUtil');
 router.post('/', async (req, res) => {
     try {
         const users = mongoUtil.getDb().collection('users');
-        const user = await users.findOne({ _id: req.body.username });
+        const user = await users.findOne({ _id: req.body.username }, { projection: { password: 1 } });
 
         if (user == null) throw 400;
 

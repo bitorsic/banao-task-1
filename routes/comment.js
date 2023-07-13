@@ -10,11 +10,11 @@ router.post('/', auth, async (req, res) => {
         const posts = mongoUtil.getDb().collection('posts');
         const comments = mongoUtil.getDb().collection('comments');
 
-        const post = await posts.findOne({ _id: Number(req.body.postId) });
+        const post = await posts.findOne({ _id: Number(req.body.postId) }, { projection: { _id: 1 } });
         if (post == null) throw 404;
 
         let commentId;
-        let comment = await comments.findOne();
+        let comment = await comments.findOne({}, { projection: { commentId: 1, _id: 0 }});
         if (comment == null) {
             await comments.insertOne({ _id: 0, commentId: 1 });
             commentId = 1;
@@ -49,10 +49,11 @@ router.delete('/', auth, async (req, res) => {
         const posts = mongoUtil.getDb().collection('posts');
         const comments = mongoUtil.getDb().collection('comments');
 
-        const comment = await comments.findOne({ _id: Number(req.query.commentId) });
+        const comment = await comments.findOne({ _id: Number(req.query.commentId) },
+            { projection: { by: 1, on: 1 } });
         if (comment == null) throw 404;
         
-        const post = await posts.findOne({ _id: comment.on });
+        const post = await posts.findOne({ _id: comment.on }, { projection: { by: 1 } });
 
         if (req.user.username != post.by && req.user.username != comment.by) throw 401;
 

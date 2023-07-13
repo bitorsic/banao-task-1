@@ -10,7 +10,7 @@ router.put('/', async (req, res) => {
         const users = mongoUtil.getDb().collection('users');
         const url = req.protocol + '://' + req.get('host');
         
-        const user = await users.findOne({ _id: req.query.username });
+        const user = await users.findOne({ _id: req.query.username }, { projection: { email: 1 } });
         if (user == null) throw 403;
 
         const token = jwt.sign(
