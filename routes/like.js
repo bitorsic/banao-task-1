@@ -8,9 +8,9 @@ router.put('/', auth, async (req, res) => {
         const users = mongoUtil.getDb().collection('users');
         const posts = mongoUtil.getDb().collection('posts');
         
-        let uname = req.user.username;
-        let action;
-        const post = await posts.findOne({ _id: Number(req.query.postId) });       
+        let uname = req.user.username, action;
+        const post = await posts.findOne({ _id: Number(req.query.postId) },
+            { projection: { likes: 1 } });
         if (post == null) throw 404;
 
         if (post.likes.includes(uname)) {

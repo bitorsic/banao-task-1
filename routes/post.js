@@ -10,10 +10,9 @@ router.post('/', auth, async (req, res) => {
         const posts = mongoUtil.getDb().collection('posts');
 
         let postId;
-        let post = await posts.findOne();
+        let post = await posts.findOne({}, { projection: { postId: 1, _id: 0 } });
         if (post == null) {
-            await posts.insertOne({ _id: 0, postId: 1 });
-            postId = 1;
+            await posts.insertOne({ _id: 0, postId: 1 }); postId = 1;
         } else postId = post.postId;
 
         let { iv, content } = encrypt(req.body.content);
@@ -29,15 +28,8 @@ router.post('/', auth, async (req, res) => {
 
         await posts.insertOne(post);
 
-        await posts.updateOne(
-            { _id: 0 },
-            { $inc: { postId: 1 } }
-        );
-
-        await users.updateOne(
-            { _id: post.by },
-            { $push: { posts: post._id } }
-        );
+        await posts.updateOne({ _id: 0 }, { $inc: { postId: 1 } });
+        await users.updateOne({ _id: post.by }, { $push: { posts: post._id } });
         
         res.status(201).send("Post created with id = " + post._id);
     } catch (e) {
@@ -66,7 +58,9 @@ router.get('/', auth, async (req, res) => {
             delete data[i].iv;
 
             for (let j=0;j<data[i].comments.length;j++) {
-                const comment = await comments.findOne({ _id: data[i].comments[0] });
+                const comment = await comments.findOne({ _id: data[i].comments[0] }, 
+                    { projection: { by: 1, iv: 1, content: 1, _id: 0 } });
+                console.log(comment)
 
                 comment.content = decrypt(comment.iv, comment.content);
                 data[i].comments.push([comment.by, comment.content]);
@@ -85,17 +79,14 @@ router.get('/', auth, async (req, res) => {
 router.put('/', auth, async (req, res) => {
     try {
         const posts = mongoUtil.getDb().collection('posts');
-        const post = await posts.findOne({ _id: Number(req.query.postId) });
+        const post = await posts.findOne({ _id: Number(req.query.postId) }, { projection: { by: 1 } });
         
         if (post == null) throw 404;
         if (post.by != req.user.username) throw 401;
 
         let { iv, content } = encrypt(req.body.content);
 
-        await posts.updateOne(
-            { _id: post._id },
-            { $set: { iv, content, edited: true } }
-        );
+        await posts.updateOne({ _id: post._id }, { $set: { iv, content, edited: true } });
 
         res.status(200).send("Post with id = " + post._id + " edited");
     } catch (e) {
@@ -112,7 +103,8 @@ router.delete('/', auth, async (req, res) => {
         const posts = mongoUtil.getDb().collection('posts');
         const comments = mongoUtil.getDb().collection('comments');
         
-        const post = await posts.findOne({ _id: Number(req.query.postId) });
+        const post = await posts.findOne({ _id: Number(req.query.postId) }, 
+            { projection: { by: 1, likes: 1, comments: 1 } });
         
         if (post == null) throw 404;
         if (post.by != req.user.username) throw 401;
@@ -125,7 +117,7 @@ router.delete('/', auth, async (req, res) => {
         }
 
         for (let i=0;i<post.comments.length;i++) {
-            const comment = await comments.findOne({ _id: post.comments[i] });
+            const comment = await comments.findOne({ _id: post.comments[i] }, { projection: { by: 1 }});
             await comments.deleteOne({ _id: comment._id });
             await users.updateOne({ _id: comment.by }, { $pull: { comments: comment._id } });
         }
