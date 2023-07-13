@@ -11,6 +11,7 @@ router.post('/', async (req, res) => {
             email: req.body.email,
             password: await bcrypt.hash(req.body.password, 10),
             _id: req.body.username,
+            friends: [],
             posts: [],
             likes: [],
             comments: []

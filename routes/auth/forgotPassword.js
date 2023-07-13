@@ -8,10 +8,8 @@ const { getDb } = require('../../mongoUtil');
 router.put('/', async (req, res) => {
     try {    
         const users = getDb().collection('users');
-        const url = req.protocol + '://' + req.get('host');
-        
         const user = await users.findOne({ _id: req.query.username }, { projection: { email: 1 } });
-        if (user == null) throw 403;
+        if (!user) throw 403;
 
         const token = jwt.sign(
             { username: user._id, password: req.body.password }, 
@@ -27,7 +25,8 @@ router.put('/', async (req, res) => {
                 pass: process.env.EMAIL_PASS
             }
         });
-
+        
+        const url = req.protocol + '://' + req.get('host');
         var mailOptions = {
             from: process.env.EMAIL_USER,
             to: user.email,

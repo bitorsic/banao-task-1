@@ -6,16 +6,16 @@ const { encrypt } = require('../cryptography');
 
 router.post('/', auth, async (req, res) => {
     try {
-        const users = getDb().collection('users');
-        const posts = getDb().collection('posts');
-        const comments = getDb().collection('comments');
-
+        const posts = getDb().collection('posts');    
         const post = await posts.findOne({ _id: Number(req.body.postId) }, { projection: { _id: 1 } });
-        if (post == null) throw 404;
+        if (!post) throw 404;
+        
+        const users = getDb().collection('users');
+        const comments = getDb().collection('comments');
 
         let commentId;
         let comment = await comments.findOne({}, { projection: { commentId: 1, _id: 0 }});
-        if (comment == null) {
+        if (!comment) {
             await comments.insertOne({ _id: 0, commentId: 1 });
             commentId = 1;
         } else commentId = comment.commentId;
@@ -45,14 +45,13 @@ router.post('/', auth, async (req, res) => {
 
 router.delete('/', auth, async (req, res) => {
     try {
+        const comments = getDb().collection('comments');
+        const comment = await comments.findOne({ _id: Number(req.query.commentId) },
+        { projection: { by: 1, on: 1 } });
+        if (!comment) throw 404;
+        
         const users = getDb().collection('users');
         const posts = getDb().collection('posts');
-        const comments = getDb().collection('comments');
-
-        const comment = await comments.findOne({ _id: Number(req.query.commentId) },
-            { projection: { by: 1, on: 1 } });
-        if (comment == null) throw 404;
-        
         const post = await posts.findOne({ _id: comment.on }, { projection: { by: 1 } });
 
         if (req.user.username != post.by && req.user.username != comment.by) throw 401;

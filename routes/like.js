@@ -5,13 +5,13 @@ const auth = require('../auth');
 
 router.put('/', auth, async (req, res) => {
     try {
-        const users = getDb().collection('users');
         const posts = getDb().collection('posts');
-        
-        let uname = req.user.username, action;
         const post = await posts.findOne({ _id: Number(req.query.postId) },
-            { projection: { likes: 1 } });
-        if (post == null) throw 404;
+        { projection: { likes: 1 } });
+        if (!post) throw 404;
+
+        const users = getDb().collection('users');
+        let uname = req.user.username, action;
 
         if (post.likes.includes(uname)) {
             await posts.updateOne( { _id: post._id }, { $pull: { likes: uname } });

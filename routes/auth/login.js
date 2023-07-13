@@ -8,8 +8,7 @@ router.post('/', async (req, res) => {
     try {
         const users = getDb().collection('users');
         const user = await users.findOne({ _id: req.body.username }, { projection: { password: 1 } });
-
-        if (user == null) throw 400;
+        if (!user) throw 400;
 
         if (await bcrypt.compare(req.body.password, user.password)) {
             const token = jwt.sign({ username: user._id }, process.env.LOGIN_KEY, { expiresIn: "15m" });

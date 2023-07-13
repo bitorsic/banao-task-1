@@ -14,6 +14,7 @@ const forgotPassword = require('./routes/auth/forgotPassword');
 const post = require('./routes/post');
 const like = require('./routes/like');
 const comment = require('./routes/comment');
+const friendships = require('./routes/friendships');
 
 app.use('/register', register);
 app.use('/login', login);
@@ -21,6 +22,7 @@ app.use('/forgot-password', forgotPassword);
 app.use('/post', post);
 app.use('/like', like);
 app.use('/comment', comment);
+app.use('/friendships', friendships);
 
 app.listen(3000, () => {
     console.log('Server running on port 3000')

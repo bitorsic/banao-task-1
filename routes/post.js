@@ -11,7 +11,7 @@ router.post('/', auth, async (req, res) => {
 
         let postId;
         let post = await posts.findOne({}, { projection: { postId: 1, _id: 0 } });
-        if (post == null) {
+        if (!post) {
             await posts.insertOne({ _id: 0, postId: 1 }); postId = 1;
         } else postId = post.postId;
 
@@ -33,7 +33,6 @@ router.post('/', auth, async (req, res) => {
         
         res.status(201).send("Post created with id = " + post._id);
     } catch (e) {
-        console.log(e)
         let code = 500, message = e;
         res.status(code).send(message);
     }
@@ -42,16 +41,17 @@ router.post('/', auth, async (req, res) => {
 router.get('/', auth, async (req, res) => {
     try {
         const posts = getDb().collection('posts');
-        const comments = getDb().collection('comments');
         let data;
-        if (req.query.user == undefined) {
-            data = await posts.find({}).toArray();
-            data.shift();
+        if (!req.query.user) {
+            data = await posts.find({}).sort({ _id: -1 }).toArray();
+            data.pop();
         } else {
-            data = await posts.find({ by: req.query.user }).toArray();
+            data = await posts.find({ by: req.query.user }).sort({ _id: -1 }).toArray();
         }
-
+        
         if (data.length == 0) throw 404;
+        
+        const comments = getDb().collection('comments');
 
         for (let i=0;i<data.length;i++) {
             data[i].content = decrypt(data[i].iv, data[i].content);
@@ -60,7 +60,6 @@ router.get('/', auth, async (req, res) => {
             for (let j=0;j<data[i].comments.length;j++) {
                 const comment = await comments.findOne({ _id: data[i].comments[0] }, 
                     { projection: { by: 1, iv: 1, content: 1, _id: 0 } });
-                console.log(comment)
 
                 comment.content = decrypt(comment.iv, comment.content);
                 data[i].comments.push([comment.by, comment.content]);
@@ -81,7 +80,7 @@ router.put('/', auth, async (req, res) => {
         const posts = getDb().collection('posts');
         const post = await posts.findOne({ _id: Number(req.query.postId) }, { projection: { by: 1 } });
         
-        if (post == null) throw 404;
+        if (!post) throw 404;
         if (post.by != req.user.username) throw 401;
 
         let { iv, content } = encrypt(req.body.content);
@@ -99,15 +98,15 @@ router.put('/', auth, async (req, res) => {
 
 router.delete('/', auth, async (req, res) => {
     try {
-        const users = getDb().collection('users');
         const posts = getDb().collection('posts');
-        const comments = getDb().collection('comments');
-        
         const post = await posts.findOne({ _id: Number(req.query.postId) }, 
-            { projection: { by: 1, likes: 1, comments: 1 } });
+        { projection: { by: 1, likes: 1, comments: 1 } });
         
-        if (post == null) throw 404;
+        if (!post) throw 404;
         if (post.by != req.user.username) throw 401;
+        
+        const users = getDb().collection('users');
+        const comments = getDb().collection('comments');
 
         await posts.deleteOne({ _id: post._id });
         await users.updateOne({ _id: post.by }, {$pull: { posts: post._id }});
