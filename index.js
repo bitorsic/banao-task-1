@@ -1,12 +1,12 @@
 const express = require('express');
 const cors = require('cors');
-const mongoUtil = require('./mongoUtil');
+const { connect } = require('./mongoUtil');
 const app = express();
 app.use(cors());
 app.use(express.json());
 require('dotenv').config();
 
-mongoUtil.connect();
+connect();
 
 const register = require('./routes/auth/register');
 const login = require('./routes/auth/login');

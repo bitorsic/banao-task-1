@@ -3,11 +3,11 @@ const bcrypt = require('bcrypt');
 const nodemailer = require('nodemailer');
 const jwt = require("jsonwebtoken");
 const router = express.Router();
-const mongoUtil = require('../../mongoUtil');
+const { getDb } = require('../../mongoUtil');
 
 router.put('/', async (req, res) => {
     try {    
-        const users = mongoUtil.getDb().collection('users');
+        const users = getDb().collection('users');
         const url = req.protocol + '://' + req.get('host');
         
         const user = await users.findOne({ _id: req.query.username }, { projection: { email: 1 } });
@@ -51,7 +51,7 @@ router.put('/', async (req, res) => {
 
 router.get('/', async (req, res) => {
     try {
-        const users = mongoUtil.getDb().collection('users');
+        const users = getDb().collection('users');
 
         const decoded = jwt.verify(req.query.token, process.env.RESET_KEY);
 

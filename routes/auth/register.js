@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcrypt');
-const mongoUtil = require('../../mongoUtil');
+const { getDb } = require('../../mongoUtil');
 
 router.post('/', async (req, res) => {
     try {
-        const users = mongoUtil.getDb().collection('users');
+        const users = getDb().collection('users');
 
         const user = {
             email: req.body.email,

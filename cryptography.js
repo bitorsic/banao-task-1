@@ -22,4 +22,4 @@ const decrypt = (iv, content) => {
     return data;
 }
 
-module.exports = { encrypt, decrypt }
+module.exports = { encrypt, decrypt };

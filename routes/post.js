@@ -1,13 +1,13 @@
 const express = require('express');
 const router = express.Router();
-const mongoUtil = require('../mongoUtil');
+const { getDb } = require('../mongoUtil');
 const auth = require('../auth');
 const { encrypt, decrypt } = require('../cryptography');
 
 router.post('/', auth, async (req, res) => {
     try {
-        const users = mongoUtil.getDb().collection('users');
-        const posts = mongoUtil.getDb().collection('posts');
+        const users = getDb().collection('users');
+        const posts = getDb().collection('posts');
 
         let postId;
         let post = await posts.findOne({}, { projection: { postId: 1, _id: 0 } });
@@ -41,8 +41,8 @@ router.post('/', auth, async (req, res) => {
 
 router.get('/', auth, async (req, res) => {
     try {
-        const posts = mongoUtil.getDb().collection('posts');
-        const comments = mongoUtil.getDb().collection('comments');
+        const posts = getDb().collection('posts');
+        const comments = getDb().collection('comments');
         let data;
         if (req.query.user == undefined) {
             data = await posts.find({}).toArray();
@@ -78,7 +78,7 @@ router.get('/', auth, async (req, res) => {
 
 router.put('/', auth, async (req, res) => {
     try {
-        const posts = mongoUtil.getDb().collection('posts');
+        const posts = getDb().collection('posts');
         const post = await posts.findOne({ _id: Number(req.query.postId) }, { projection: { by: 1 } });
         
         if (post == null) throw 404;
@@ -99,9 +99,9 @@ router.put('/', auth, async (req, res) => {
 
 router.delete('/', auth, async (req, res) => {
     try {
-        const users = mongoUtil.getDb().collection('users');
-        const posts = mongoUtil.getDb().collection('posts');
-        const comments = mongoUtil.getDb().collection('comments');
+        const users = getDb().collection('users');
+        const posts = getDb().collection('posts');
+        const comments = getDb().collection('comments');
         
         const post = await posts.findOne({ _id: Number(req.query.postId) }, 
             { projection: { by: 1, likes: 1, comments: 1 } });

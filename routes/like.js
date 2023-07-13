@@ -1,12 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const mongoUtil = require('../mongoUtil');
+const { getDb } = require('../mongoUtil');
 const auth = require('../auth');
 
 router.put('/', auth, async (req, res) => {
     try {
-        const users = mongoUtil.getDb().collection('users');
-        const posts = mongoUtil.getDb().collection('posts');
+        const users = getDb().collection('users');
+        const posts = getDb().collection('posts');
         
         let uname = req.user.username, action;
         const post = await posts.findOne({ _id: Number(req.query.postId) },

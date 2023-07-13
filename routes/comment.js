@@ -1,14 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const mongoUtil = require('../mongoUtil');
+const { getDb } = require('../mongoUtil');
 const auth = require('../auth');
 const { encrypt } = require('../cryptography');
 
 router.post('/', auth, async (req, res) => {
     try {
-        const users = mongoUtil.getDb().collection('users');
-        const posts = mongoUtil.getDb().collection('posts');
-        const comments = mongoUtil.getDb().collection('comments');
+        const users = getDb().collection('users');
+        const posts = getDb().collection('posts');
+        const comments = getDb().collection('comments');
 
         const post = await posts.findOne({ _id: Number(req.body.postId) }, { projection: { _id: 1 } });
         if (post == null) throw 404;
@@ -45,9 +45,9 @@ router.post('/', auth, async (req, res) => {
 
 router.delete('/', auth, async (req, res) => {
     try {
-        const users = mongoUtil.getDb().collection('users');
-        const posts = mongoUtil.getDb().collection('posts');
-        const comments = mongoUtil.getDb().collection('comments');
+        const users = getDb().collection('users');
+        const posts = getDb().collection('posts');
+        const comments = getDb().collection('comments');
 
         const comment = await comments.findOne({ _id: Number(req.query.commentId) },
             { projection: { by: 1, on: 1 } });

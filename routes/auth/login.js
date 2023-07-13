@@ -2,11 +2,11 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcrypt');
 const jwt = require("jsonwebtoken");
-const mongoUtil = require('../../mongoUtil');
+const { getDb } = require('../../mongoUtil');
 
 router.post('/', async (req, res) => {
     try {
-        const users = mongoUtil.getDb().collection('users');
+        const users = getDb().collection('users');
         const user = await users.findOne({ _id: req.body.username }, { projection: { password: 1 } });
 
         if (user == null) throw 400;
