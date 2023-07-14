@@ -8,7 +8,7 @@ require('dotenv').config();
 
 connect();
 
-const register = require('./routes/auth/register');
+const users = require('./routes/users');
 const login = require('./routes/auth/login');
 const forgotPassword = require('./routes/auth/forgotPassword');
 const post = require('./routes/post');
@@ -16,7 +16,7 @@ const like = require('./routes/like');
 const comment = require('./routes/comment');
 const friendships = require('./routes/friendships');
 
-app.use('/register', register);
+app.use('/users', users);
 app.use('/login', login);
 app.use('/forgot-password', forgotPassword);
 app.use('/post', post);
