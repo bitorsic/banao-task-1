@@ -11,18 +11,18 @@ connect();
 const users = require('./routes/users');
 const login = require('./routes/auth/login');
 const forgotPassword = require('./routes/auth/forgotPassword');
-const post = require('./routes/post');
-const like = require('./routes/like');
-const comment = require('./routes/comment');
-const friendships = require('./routes/friendships');
+const posts = require('./routes/posts');
+const likes = require('./routes/likes');
+const comments = require('./routes/comments');
+const friends = require('./routes/friends');
 
 app.use('/users', users);
 app.use('/login', login);
 app.use('/forgot-password', forgotPassword);
-app.use('/post', post);
-app.use('/like', like);
-app.use('/comment', comment);
-app.use('/friendships', friendships);
+app.use('/posts', posts);
+app.use('/likes', likes);
+app.use('/comments', comments);
+app.use('/friends', friends);
 
 app.listen(3000, () => {
     console.log('Server running on port 3000')

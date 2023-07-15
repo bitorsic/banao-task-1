@@ -30,7 +30,7 @@ router.put('/:username', auth, async (req, res) => {
 
         res.status(200).send(message);
     } catch (e) {
-        let code = 500, message = e;
+        let code = 500, message = e.message;
         if (e == 403) { code = e, message = "Cannot send a friend request to self" }
         if (e == 404) { code = e, message = "The username does not exist" }
         if (e.code == 11000) { code = 409; message = "Friend request already sent" }
@@ -61,7 +61,7 @@ router.delete('/:username', auth, async (req, res) => {
         }
         res.status(200).send(message);
     } catch (e) {
-        let code = 500, message = e;
+        let code = 500, message = e.message;
         if (e == 404) { code = e, message = "The username does not exist" }
         if (e == 409) { code = e, message = "User not in your friend list and no pending request to you from user" }
         res.status(code).send(message);
@@ -80,7 +80,7 @@ router.get('/requests', auth, async (req, res) => {
 
         res.status(200).send(fReqs);
     } catch (e) {
-        let code = 500, message = e;
+        let code = 500, message = e.message;
         if (e == 404) { code = e, message = "No pending friend requests" }
         res.status(code).send(message);
     }
@@ -99,7 +99,7 @@ router.get('/:username', auth, async (req, res) => {
         if (user.friends.length == 0) throw 404;
         res.status(200).send(user.friends);            
     } catch (e) {
-        let code = 500, message = e;
+        let code = 500, message = e.message;
         if (e == 403) { code = e, message = "User is not in your friend list" }
         if (e == 404) { code = e, message = "Your friend list is empty" }
         res.status(code).send(message);

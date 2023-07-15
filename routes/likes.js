@@ -3,10 +3,10 @@ const router = express.Router();
 const { getDb } = require('../mongoUtil');
 const auth = require('../auth');
 
-router.put('/', auth, async (req, res) => {
+router.put('/:postId', auth, async (req, res) => {
     try {
         const posts = getDb().collection('posts');
-        const post = await posts.findOne({ _id: Number(req.query.postId) },
+        const post = await posts.findOne({ _id: Number(req.params.postId) },
         { projection: { likes: 1 } });
         if (!post) throw 404;
 
@@ -25,7 +25,7 @@ router.put('/', auth, async (req, res) => {
 
         res.status(200).send("Post with id = " + post._id + action + uname);
     } catch (e) {
-        let code = 500, message = e;
+        let code = 500, message = e.message;
         if (e == 404) { code = e, message = "Post with given id not found" }
         res.status(code).send(message);
     }

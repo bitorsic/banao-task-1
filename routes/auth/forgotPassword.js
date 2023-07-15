@@ -4,17 +4,21 @@ const nodemailer = require('nodemailer');
 const jwt = require("jsonwebtoken");
 const router = express.Router();
 const { getDb } = require('../../mongoUtil');
+const { encrypt, decrypt } = require('../../cryptography');
 
-router.put('/', async (req, res) => {
+router.put('/:username', async (req, res) => {
     try {    
         const users = getDb().collection('users');
-        const user = await users.findOne({ _id: req.query.username }, { projection: { email: 1 } });
-        if (!user) throw 403;
-
+        const user = await users.findOne({ _id: req.params.username }, { projection: { email: 1 } });
+        if (!user) throw 403; // Incorrect username
+        
+        // Creating JWT with username and password, signing it with the RESET_KEY
         const token = jwt.sign(
             { username: user._id, password: req.body.password }, 
             process.env.RESET_KEY, { expiresIn: "10m" }
         );
+            
+        const id = encodeURIComponent(encrypt(token));
 
         let transport = nodemailer.createTransport({
             host: "smtp.zoho.in",
@@ -33,7 +37,7 @@ router.put('/', async (req, res) => {
             subject: 'Password Reset',
             text: 
                 'Here\'s the link to reset your password:\n' + 
-                url + '/forgot-password?token=' + token +
+                url + '/forgot-password?id=' + id +
                 '\n\nThe password will be reset to the one you provided to send the email.' +
                 '\nThe link is valid only for 10 minutes.'
         };
@@ -42,7 +46,7 @@ router.put('/', async (req, res) => {
 
         res.status(200).send("An email with the reset link has been sent to your email id");
     } catch (e) {
-        let code = 500, message = e;
+        let code = 500, message = e.message;
         if (e == 403) { code = e, message = "The username does not exist" }
         res.status(code).send(message);
     }
@@ -52,7 +56,8 @@ router.get('/', async (req, res) => {
     try {
         const users = getDb().collection('users');
 
-        const decoded = jwt.verify(req.query.token, process.env.RESET_KEY);
+        const token = decrypt(decodeURIComponent(req.query.id));
+        const decoded = jwt.verify(token, process.env.RESET_KEY);
 
         await users.updateOne({ _id: decoded.username },{
             $set: { password: await bcrypt.hash(decoded.password, 10) }
@@ -60,8 +65,8 @@ router.get('/', async (req, res) => {
 
         res.status(200).send("Password successfully reset")
     } catch (e) {
+        message = "The link is broken";
         if (e.name == "TokenExpiredError") { message = "The link has expired" }
-        if (e.name == "JsonWebTokenError") { message = "Please recheck and re-enter the link" }
         res.status(401).send(message);
     }
 });

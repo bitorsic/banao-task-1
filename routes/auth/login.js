@@ -15,7 +15,7 @@ router.post('/', async (req, res) => {
             res.status(200).send({ username: user._id, token });
         } else { throw 403 }
     } catch (e) {
-        let code = 500, message = e;
+        let code = 500, message = e.message;
         if (e == 400) { code = e, message = "User not found" }
         if (e == 403) { code = e, message = "Incorrect password" }
         res.status(code).send(message);
