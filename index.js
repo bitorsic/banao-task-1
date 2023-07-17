@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const { connect } = require('./mongoUtil');
+const { connect } = require('./helpers/mongoUtil');
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -26,4 +26,4 @@ app.use('/friends', friends);
 
 app.listen(3000, () => {
     console.log('Server running on port 3000')
-})
+});

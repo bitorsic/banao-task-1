@@ -3,14 +3,14 @@ const bcrypt = require('bcrypt');
 const nodemailer = require('nodemailer');
 const jwt = require("jsonwebtoken");
 const router = express.Router();
-const { getDb } = require('../../mongoUtil');
-const { encrypt, decrypt } = require('../../cryptography');
+const { getDb } = require('../../helpers/mongoUtil');
+const { encrypt, decrypt } = require('../../helpers/cryptography');
 
 router.put('/:username', async (req, res) => {
     try {    
         const users = getDb().collection('users');
         const user = await users.findOne({ _id: req.params.username }, { projection: { email: 1 } });
-        if (!user) throw 403; // Incorrect username
+        if (!user) throw 404; // Incorrect username
         
         // Creating JWT with username and password, signing it with the RESET_KEY
         const token = jwt.sign(
@@ -47,7 +47,7 @@ router.put('/:username', async (req, res) => {
         res.status(200).send("An email with the reset link has been sent to your email id");
     } catch (e) {
         let code = 500, message = e.message;
-        if (e == 403) { code = e, message = "The username does not exist" }
+        if (e == 404) { code = e, message = "User not found" }
         res.status(code).send(message);
     }
 });

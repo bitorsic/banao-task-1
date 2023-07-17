@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { getDb } = require('../mongoUtil');
-const auth = require('../auth');
-const { encrypt, decrypt } = require('../cryptography');
+const auth = require('../helpers/auth');
+const { getDb } = require('../helpers/mongoUtil');
+const { encrypt, decrypt } = require('../helpers/cryptography');
 
 router.post('/', auth, async (req, res) => {
     try {
@@ -56,7 +56,8 @@ router.get('/', auth, async (req, res) => {
         for (let i=0;i<data.length;i++) {
             data[i].content = decrypt(data[i].content);
 
-            for (let j=data[i].comments.length-1;j>=0;j--) {
+            data[i].comments = data[i].comments.reverse();
+            for (let j=0;j<data[i].comments.length;j++) {
                 const comment = await comments.findOne({ _id: data[i].comments[0] }, 
                     { projection: { by: 1, content: 1, _id: 0 } });
 
@@ -70,6 +71,34 @@ router.get('/', auth, async (req, res) => {
     } catch (e) {
         let code = 500, message = e.message;
         if (e == 404) { code = e, message = "No posts found" }
+        res.status(code).send(message);
+    }
+});
+
+router.get('/:postId', auth, async (req, res) => {
+    try {
+        const posts = getDb().collection('posts');
+        let post = await posts.findOne({ _id: Number(req.params.postId) }, { projection: { _id: 0 }});
+        if (!post) throw 404;
+        
+        post.content = decrypt(post.content);
+
+        const comments = getDb().collection('comments');
+
+        post.comments = post.comments.reverse();
+        for (let j=0;j<post.comments.length;j++) {
+            const comment = await comments.findOne({ _id: post.comments[0] }, 
+                { projection: { by: 1, content: 1, _id: 0 } });
+
+            comment.content = decrypt(comment.content);
+            post.comments.push([comment.by, comment.content]);
+            post.comments.shift();
+        }
+
+        res.status(200).send(post);
+    } catch (e) {
+        let code = 500, message = e.message;
+        if (e == 404) { code = e, message = "Post with id = " + req.params.postId + " not found" }
         res.status(code).send(message);
     }
 });
@@ -89,8 +118,8 @@ router.put('/:postId', auth, async (req, res) => {
         res.status(200).send("Post with id = " + post._id + " edited");
     } catch (e) {
         let code = 500, message = e.message;
-        if (e == 404) { code = e, message = "Post with given id not found" }
-        if (e == 401) { code = e, message = "Post does not belong to the user" }
+        if (e == 404) { code = e, message = "Post with id = " + req.params.postId + " not found" }
+        if (e == 401) { code = e, message = "Post with id = " + req.params.postId + " does not belong to you" }
         res.status(code).send(message);
     }
 });
@@ -115,7 +144,7 @@ router.delete('/:postId', auth, async (req, res) => {
         const url = req.protocol + '://' + req.get('host');
         
         for (let i=0;i<post.comments.length;i++) {
-            await axios.delete(url + '/comments/' + post.comments[i], { headers: req.headers});
+            await axios.delete(url + '/comments/' + post.comments[i], { headers: req.headers });
         }
         
         await posts.deleteOne({ _id: post._id });
@@ -123,8 +152,8 @@ router.delete('/:postId', auth, async (req, res) => {
         res.status(200).send("Post with id = " + post._id + " deleted");
     } catch (e) {
         let code = 500, message = e.message;
-        if (e == 404) { code = e, message = "Post with given id not found" }
-        if (e == 401) { code = e, message = "Post does not belong to the user" }
+        if (e == 404) { code = e, message = "Post with id = " + req.params.postId + " not found" }
+        if (e == 401) { code = e, message = "Post with id = " + req.params.postId + " does not belong to you" }
         res.status(code).send(message);
     }
 });

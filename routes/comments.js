@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { getDb } = require('../mongoUtil');
-const auth = require('../auth');
-const { encrypt } = require('../cryptography');
+const auth = require('../helpers/auth');
+const { getDb } = require('../helpers/mongoUtil');
+const { encrypt, decrypt } = require('../helpers/cryptography');
 
 router.post('/', auth, async (req, res) => {
     try {
@@ -38,7 +38,27 @@ router.post('/', auth, async (req, res) => {
         res.status(201).send("Commented on post with id = " + post._id + ", comment id = " + comment._id);
     } catch (e) {
         let code = 500, message = e.message;
-        if (e == 404) { code = e, message = "Post with given id not found" }
+        if (e == 404) { code = e, message = "Post with id = " + req.body.postId + " not found" }
+        res.status(code).send(message);
+    }
+});
+
+router.get('/:commentId', auth, async (req, res) => {
+    try {
+        const comments = getDb().collection('comments');
+        let comment = await comments.findOne({ _id: Number(req.params.commentId) }, { projection: { _id: 0 }});
+        if (!comment) throw 404;
+
+        const posts = getDb().collection('posts');
+        comment.on = await posts.findOne({ _id: comment.on }, { projection: { by: 1, content: 1, _id: 0 }});
+
+        comment.content = decrypt(comment.content);
+        comment.on.content = decrypt(comment.on.content);
+
+        res.status(200).send(comment);
+    } catch (e) {
+        let code = 500, message = e.message;
+        if (e == 404) { code = e, message = "Comment with id = " + req.params.commentId + " not found" }
         res.status(code).send(message);
     }
 });
@@ -64,8 +84,8 @@ router.delete('/:commentId', auth, async (req, res) => {
     } catch (e) {
         console.log(e)
         let code = 500, message = e.message;
-        if (e == 404) { code = e, message = "Comment with given id not found" }
-        if (e == 401) { code = e, message = "The user is not permitted to delete the comment" }
+        if (e == 404) { code = e, message = "Comment with id = " + req.params.commentId + " not found" }
+        if (e == 401) { code = e, message = "The comment or post does not belong to " + req.user.username }
         res.status(code).send(message);
     }
 });

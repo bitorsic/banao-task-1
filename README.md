@@ -2,7 +2,7 @@
 Backend for a social media platform, where users can create posts, and like and comment on them  
 
 ## API Documentation
-Read the API documentation at https://documenter.getpostman.com/view/25770153/2s946cgZod
+The API documentation will shortly be updated
 
 ## Installation
 - Install the required node packages using `npm i`

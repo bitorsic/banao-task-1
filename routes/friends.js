@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { getDb } = require('../mongoUtil');
-const auth = require('../auth');
+const auth = require('../helpers/auth');
+const { getDb } = require('../helpers/mongoUtil');
 
 router.put('/:username', auth, async (req, res) => {
     try {
@@ -32,9 +32,9 @@ router.put('/:username', auth, async (req, res) => {
     } catch (e) {
         let code = 500, message = e.message;
         if (e == 403) { code = e, message = "Cannot send a friend request to self" }
-        if (e == 404) { code = e, message = "The username does not exist" }
+        if (e == 404) { code = e, message = "User not found" }
         if (e.code == 11000) { code = 409; message = "Friend request already sent" }
-        if (e == 409) { code = e, message = "User already in your friend list" }
+        if (e == 409) { code = e, message = "You're already friends with " + req.params.username }
         res.status(code).send(message);
     }
 });
@@ -54,7 +54,7 @@ router.delete('/:username', auth, async (req, res) => {
             await users.updateOne(user, { $pull: { friends: req.user.username } });
             await users.updateOne({ _id: req.user.username }, { $pull: { friends: user._id } });
             message = user._id + " removed from friends";
-        } else if (!fReq) throw 409;
+        } else if (!fReq) throw 403;
         else {
             friend_requests.deleteOne(fReq);
             message = "Friend request from " + fReq._id.from + " declined";
@@ -62,8 +62,8 @@ router.delete('/:username', auth, async (req, res) => {
         res.status(200).send(message);
     } catch (e) {
         let code = 500, message = e.message;
-        if (e == 404) { code = e, message = "The username does not exist" }
-        if (e == 409) { code = e, message = "User not in your friend list and no pending request to you from user" }
+        if (e == 404) { code = e, message = "User not found" }
+        if (e == 403) { code = e, message = "User not in your friend list and pending requests" }
         res.status(code).send(message);
     }
 });
@@ -100,7 +100,7 @@ router.get('/:username', auth, async (req, res) => {
         res.status(200).send(user.friends);            
     } catch (e) {
         let code = 500, message = e.message;
-        if (e == 403) { code = e, message = "User is not in your friend list" }
+        if (e == 403) { code = e, message = "You're not friends with " + req.params.username }
         if (e == 404) { code = e, message = "Your friend list is empty" }
         res.status(code).send(message);
     }

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { getDb } = require('../mongoUtil');
-const auth = require('../auth');
+const auth = require('../helpers/auth');
+const { getDb } = require('../helpers/mongoUtil');
 
 router.put('/:postId', auth, async (req, res) => {
     try {
@@ -26,7 +26,7 @@ router.put('/:postId', auth, async (req, res) => {
         res.status(200).send("Post with id = " + post._id + action + uname);
     } catch (e) {
         let code = 500, message = e.message;
-        if (e == 404) { code = e, message = "Post with given id not found" }
+        if (e == 404) { code = e, message = "Post with id = " + req.params.postId + " not found" }
         res.status(code).send(message);
     }
 });

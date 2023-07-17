@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcrypt');
-const { getDb } = require('../mongoUtil');
-const auth = require('../auth');
+const auth = require('../helpers/auth');
+const { getDb } = require('../helpers/mongoUtil');
+const { encrypt, decrypt } = require('../helpers/cryptography');
 
 router.post('/', async (req, res) => {
     try {
@@ -54,7 +55,7 @@ router.get('/', async (req, res) => {
 
 router.delete('/delete/:username', auth, async (req, res) => {
     try {
-        if (req.params.username != req.user.username) throw 403;
+        if (req.params.username != req.user.username) throw 401;
 
         const users = getDb().collection('users');
         const user = await users.findOne({ _id: req.params.username }, 
@@ -76,21 +77,55 @@ router.delete('/delete/:username', auth, async (req, res) => {
         }
 
         for (let i=0;i<user.comments.length;i++) {
-            await axios.delete(url + '/comments/' + user.comments[i], { headers: req.headers});
+            await axios.delete(url + '/comments/' + user.comments[i], { headers: req.headers });
         }
         
         for (let i=0;i<user.posts.length;i++) {
-            await axios.delete(url + '/posts/' + user.posts[i], { headers: req.headers});
+            let result = await axios.delete(url + '/posts/' + user.posts[i], { headers: req.headers });
+            console.log(result.data)
         }
         
         await users.deleteOne({ _id: user._id });
 
         res.status(200).send("User " + user._id + " succesfully deleted");
     } catch (e) {
-        console.log(e)
         let code = 500, message = e.message;
-        if (e == 403) { code = e, message = "You need to be logged in to delete an account" }
+        if (e == 401) { code = e, message = "You need to be logged in to delete your account" }
         if (e == 404) { code = e, message = "Your account was already deleted" }
+        res.status(code).send(message);
+    }
+});
+
+router.get('/:username', async (req, res) => {
+    try {
+        const users = getDb().collection('users');
+
+        let user = await users.findOne({ _id: req.params.username }, 
+            { projection: { friends: 1, posts: 1, likes: 1, comments: 1 } });
+        if (!user) throw 404;
+
+        user.username = user._id; delete user._id;
+
+        if (user.posts.length == 0) user.posts = [];
+        else {
+            const posts = getDb().collection('posts');  
+            let postsList = [];
+            for (let i=user.posts.length-1;i>=0;i--) {
+                let post = await posts.findOne({ _id: user.posts[i] }, 
+                    { projection: { content: 1, _id: 0 } });
+                postsList.push(decrypt(post.content));
+            }
+            user.posts = postsList;
+        }
+            
+        user.friends = user.friends.length;
+        user.likes = user.likes.length;
+        user.comments = user.comments.length;
+
+        res.status(200).send(user)
+    } catch (e) {
+        let code = 500, message = e.message;
+        if (e == 404) { code = e, message = "No users found" }
         res.status(code).send(message);
     }
 });
