@@ -62,7 +62,7 @@ router.get('/', auth, async (req, res) => {
                     { projection: { by: 1, content: 1, _id: 0 } });
 
                 comment.content = decrypt(comment.content);
-                data[i].comments.push([comment.by, comment.content]);
+                data[i].comments.push(comment);
                 data[i].comments.shift();
             }
         }
@@ -91,7 +91,7 @@ router.get('/:postId', auth, async (req, res) => {
                 { projection: { by: 1, content: 1, _id: 0 } });
 
             comment.content = decrypt(comment.content);
-            post.comments.push([comment.by, comment.content]);
+            post.comments.push(comment);
             post.comments.shift();
         }
 

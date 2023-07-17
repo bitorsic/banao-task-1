@@ -3,7 +3,6 @@ const router = express.Router();
 const bcrypt = require('bcrypt');
 const auth = require('../helpers/auth');
 const { getDb } = require('../helpers/mongoUtil');
-const { encrypt, decrypt } = require('../helpers/cryptography');
 
 router.post('/', async (req, res) => {
     try {
@@ -96,31 +95,37 @@ router.delete('/delete/:username', auth, async (req, res) => {
     }
 });
 
-router.get('/:username', async (req, res) => {
+router.get('/:username', auth, async (req, res) => {
     try {
         const users = getDb().collection('users');
 
         let user = await users.findOne({ _id: req.params.username }, 
-            { projection: { friends: 1, posts: 1, likes: 1, comments: 1 } });
+            { projection: { friends: 1, posts: 1, comments: 1 } });
         if (!user) throw 404;
 
         user.username = user._id; delete user._id;
+        const axios = require('axios');
+        const url = req.protocol + '://' + req.get('host');
 
-        if (user.posts.length == 0) user.posts = [];
-        else {
-            const posts = getDb().collection('posts');  
+        if (!(user.posts.length == 0)) {
             let postsList = [];
+
             for (let i=user.posts.length-1;i>=0;i--) {
-                let post = await posts.findOne({ _id: user.posts[i] }, 
-                    { projection: { content: 1, _id: 0 } });
-                postsList.push(decrypt(post.content));
+                const result = await axios.get(url + '/posts/' + user.posts[i], { headers: req.headers });
+                postsList.push(result.data.content);
             }
             user.posts = postsList;
         }
-            
-        user.friends = user.friends.length;
-        user.likes = user.likes.length;
-        user.comments = user.comments.length;
+
+        if (!(user.comments.length == 0)) {
+            let commentsList = [];
+
+            for (let i=user.comments.length-1;i>=0;i--) {
+                const result = await axios.get(url + '/comments/' + user.comments[i], { headers: req.headers });
+                commentsList.push(result.data.content);
+            }
+            user.comments = commentsList;
+        }
 
         res.status(200).send(user)
     } catch (e) {

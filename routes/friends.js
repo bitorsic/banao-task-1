@@ -25,7 +25,7 @@ router.put('/:username', auth, async (req, res) => {
             await users.updateOne({ _id: fReq._id.from }, { $push: { friends: fReq._id.to } });
             await users.updateOne({ _id: fReq._id.to }, { $push: { friends: fReq._id.from } });
             await friend_requests.deleteOne(fReq);
-            message = "You are now friends with " + fReq._id.from;
+            message = "Friend request from " + fReq._id.from + " accepted";
         }
 
         res.status(200).send(message);
@@ -92,7 +92,7 @@ router.get('/:username', auth, async (req, res) => {
         let user = await users.findOne({ _id: req.user.username }, { projection: { friends: 1 }});
 
         if (req.params.username != user._id) {
-            if (!(user.friends.includes(req.params.username))) throw 403;
+            // if (!(user.friends.includes(req.params.username))) throw 403;
             user = await users.findOne({ _id: req.params.username }, { projection: { friends: 1, _id: 0 }});
         }
         
@@ -100,7 +100,7 @@ router.get('/:username', auth, async (req, res) => {
         res.status(200).send(user.friends);            
     } catch (e) {
         let code = 500, message = e.message;
-        if (e == 403) { code = e, message = "You're not friends with " + req.params.username }
+        // if (e == 403) { code = e, message = "You're not friends with " + req.params.username }
         if (e == 404) { code = e, message = "Your friend list is empty" }
         res.status(code).send(message);
     }
