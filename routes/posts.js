@@ -58,17 +58,17 @@ router.get('/', auth, async (req, res) => {
 
             data[i].comments = data[i].comments.reverse();
             for (let j=0;j<data[i].comments.length;j++) {
-                const comment = await comments.findOne({ _id: data[i].comments[0] }, 
+                const comment = await comments.findOne({ _id: data[i].comments[j] }, 
                     { projection: { by: 1, content: 1, _id: 0 } });
 
                 comment.content = decrypt(comment.content);
-                data[i].comments.push(comment);
-                data[i].comments.shift();
+                data[i].comments[j] = comment;
             }
         }
 
         res.status(200).send(data);
     } catch (e) {
+        console.log(e)
         let code = 500, message = e.message;
         if (e == 404) { code = e, message = "No posts found" }
         res.status(code).send(message);
@@ -86,13 +86,12 @@ router.get('/:postId', auth, async (req, res) => {
         const comments = getDb().collection('comments');
 
         post.comments = post.comments.reverse();
-        for (let j=0;j<post.comments.length;j++) {
-            const comment = await comments.findOne({ _id: post.comments[0] }, 
+        for (let i=0;i<post.comments.length;i++) {
+            const comment = await comments.findOne({ _id: post.comments[i] }, 
                 { projection: { by: 1, content: 1, _id: 0 } });
 
             comment.content = decrypt(comment.content);
-            post.comments.push(comment);
-            post.comments.shift();
+            post.comments[i] = comment;
         }
 
         res.status(200).send(post);

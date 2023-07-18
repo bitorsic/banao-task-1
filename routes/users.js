@@ -108,23 +108,21 @@ router.get('/:username', auth, async (req, res) => {
         const url = req.protocol + '://' + req.get('host');
 
         if (!(user.posts.length == 0)) {
-            let postsList = [];
+            user.posts = user.posts.reverse();
 
-            for (let i=user.posts.length-1;i>=0;i--) {
+            for (let i=0;i<user.posts.length;i++) {
                 const result = await axios.get(url + '/posts/' + user.posts[i], { headers: req.headers });
-                postsList.push(result.data.content);
+                user.posts[i] = result.data.content;
             }
-            user.posts = postsList;
         }
 
         if (!(user.comments.length == 0)) {
-            let commentsList = [];
+            user.posts = user.posts.reverse();
 
-            for (let i=user.comments.length-1;i>=0;i--) {
+            for (let i=0;i<user.comments.length;i++) {
                 const result = await axios.get(url + '/comments/' + user.comments[i], { headers: req.headers });
-                commentsList.push(result.data.content);
+                user.comments[i] = result.data.content;
             }
-            user.comments = commentsList;
         }
 
         res.status(200).send(user)
